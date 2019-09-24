@@ -5,6 +5,7 @@ const repository = require('../repositories/customer-repository');
 const md5 = require('md5');
 const emailService = require('../services/email-service');
 const smsService = require('../services/sms-service');
+const PNNormalizeService = require('../services/phone-number-normalize-service');
 
 exports.post = async (req, res, next) => {
     let contract = new ValidationContract();
@@ -22,6 +23,8 @@ exports.post = async (req, res, next) => {
         await repository.create({
             name: req.body.name,
             email: req.body.email,
+            phoneNumber: req.body.phoneNumber,
+            country: req.body.country,
             password: md5(req.body.password + global.SALT_KEY)
         });
 
@@ -31,8 +34,10 @@ exports.post = async (req, res, next) => {
             req.body.name)
             );
 
+            var phoneNumber = await PNNormalizeService.normalize(req.body.phoneNumber, req.body.country);
+
         smsService.send(
-            process.env.PERSONAL_PHONE_NUMBER,
+            phoneNumber,
             'Você foi cadastrado com sucesso no nosso programa de desenvolvedores.'
             );
 
