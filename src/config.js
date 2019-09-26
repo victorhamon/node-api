@@ -3,5 +3,5 @@ global.EMAIL_TMPL = 'Olá, <strong>{0}</strong>, seja bem vindo ao Node Store!';
 
 module.exports = {
     connectionString: `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASS}@cluster0-6zscd.mongodb.net/node-str?retryWrites=true&w=majority`,
-    containerConnectionString: 'TBD'
+    containerConnectionString: process.env.AZURE_STORAGE_CONNECTION_STRING
 }

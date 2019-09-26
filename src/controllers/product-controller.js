@@ -2,6 +2,10 @@
 
 const ValidationContract = require('../validators/fluent-validator');
 const repository = require('../repositories/product-repository');
+const config = require('../config');
+const guid = require('guid');
+const assert = require('assert');
+const azure = require('azure-storage');
 
 exports.get = async (req, res, next) => {
     try {
@@ -60,7 +64,39 @@ exports.post = async (req, res, next) => {
     }
 
     try {
-        await repository.create(req.body);
+        //Create blob service
+        const blobService = azure.createBlobService(config.containerConnectionString);
+
+        let filename = guid.raw().toString() + '.jpg';
+        let rawData = req.body.image;
+        let matches = rawData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        let type = matches[1];
+        let buffer = new Buffer.from(matches[2], 'base64');
+        let container = 'product-images';
+        let blockId = guid.raw();
+
+        //Save image
+        await blobService.createBlockFromText(blockId, container, filename, buffer, {
+            contentType: type
+        }, (error, result, response) => {
+            if (error) {
+                filename = 'default-product.png';
+            }
+
+            blobService.commitBlocks(container, filename, { LatestBlocks: [blockId] }, error =>  {
+                assert.equal(error, null);
+              });
+        });
+
+        await repository.create({
+            title: req.body.title,
+            slug: req.body.slug,
+            description: req.body.description,
+            price: req.body.price,
+            active: true,
+            tags: req.body.tags,
+            image: process.env.AZURE_STORAGE_URL + filename
+        });
         res.status(201).send({
             message: 'Produto cadastrado com sucesso.'
         });
